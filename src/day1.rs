@@ -1,32 +1,49 @@
 use std::collections::{HashMap, HashSet};
 use bit_set::BitSet;
 
-fn split_once(s: &str, delimiter: char) -> Option<(&str, &str)> {
-    if let Some(index) = s.find(delimiter) {
-        Some((&s[..index], &s[index + delimiter.len_utf8()..]))
-    } else {
-        None
-    }
+pub fn fast_cols(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+    input.as_bytes().chunks(14).map(|chunk| {
+        let b4 = (chunk[8 + 4] - b'0') as i32;
+        let b0 = (chunk[8 + 0] - b'0') as i32 * 10000;
+        let b1 = (chunk[8 + 1] - b'0') as i32 * 1000;
+        let b2 = (chunk[8 + 2] - b'0') as i32 * 100;
+        let b3 = (chunk[8 + 3] - b'0') as i32 * 10;
+
+        let a0 = (chunk[0 + 0] - b'0') as i32 * 10000;
+        let a1 = (chunk[0 + 1] - b'0') as i32 * 1000;
+        let a2 = (chunk[0 + 2] - b'0') as i32 * 100;
+        let a3 = (chunk[0 + 3] - b'0') as i32 * 10;
+        let a4 = (chunk[0 + 4] - b'0') as i32;
+
+        let a = a0 + a1 + a2 + a3 + a4;
+        let b = b0 + b1 + b2 + b3 + b4;
+        (a, b)
+    })
 }
 
-pub fn part1_fallback(input: &str) -> i32 {
+pub fn fallback_cols(input: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+    input.lines().map(|line| {
+        let split_index = line.find(' ').expect("Missing whitespace in line");
+        let (first, second) = line.split_at(split_index);
+        let second = second[1..].trim(); // Skip the whitespace and trim the second part
+        let a = first.parse::<i32>().expect("Failed to parse first part as i32");
+        let b = second.parse::<i32>().expect("Failed to parse second part as i32");
+        (a, b)
+    })
+}
+
+fn part1_impl<I>(iter: I) -> i32
+    where I: IntoIterator<Item = (i32, i32)>
+{
     // Parse the input into rows
     let mut col1 = Vec::new();
     let mut col2 = Vec::new();
 
 
     // Iterate through each line and split into two columns
-    for line in input.split('\n') {
-        if let Some((first, second)) = split_once(line, ' ') {
-            // Convert the first and second parts into integers
-            if let (Ok(a), Ok(b)) = (
-                first.parse::<i32>(),
-                second.trim().parse::<i32>(),
-            ) {
-                col1.push(a);
-                col2.push(b);
-            }
-        }
+    for (a, b) in iter {
+        col1.push(a);
+        col2.push(b);
     }
 
     // Sort the columns
@@ -46,47 +63,15 @@ pub fn part1(input: &str) -> i32 {
     // no nl for end
     let never_fastpath = (input.len() + 1) % 14 != 0;
     if never_fastpath {
-        return part1_fallback(input);
+        part1_impl(fallback_cols(input))
+    } else {
+        part1_impl(fast_cols(input))
     }
-    return part1_fallback(input);
 }
 
-pub fn part2_fallback(input: &str) -> i64 {
-    // Create hashmaps to count occurrences in each column
-    let mut col1: HashMap<i32, i32> = HashMap::new();
-    let mut col2: HashMap<i32, i32> = HashMap::new();
-
-    // Iterate through each line and split into two columns
-    for line in input.lines() {
-        if let Some((first, second)) = split_once(line, ' ') {
-            // Convert the first and second parts into integers
-            if let (Ok(a), Ok(b)) = (
-                first.parse::<i32>(),
-                second.trim().parse::<i32>(),
-            ) {
-                // Increment occurrences of a in col1
-                *col1.entry(a).or_insert(0) += 1;
-                // Increment occurrences of b in col2
-                *col2.entry(b).or_insert(0) += 1;
-            }
-        }
-    }
-
-    // Create an i64 counter for metric
-    let mut total_similarity: i64 = 0;
-
-    // Iterate over col1 hashmap
-    for (key, count1) in &col1 {
-        // Get single key similarity
-        // Multiply occurrences in col1 by occurrences in col2 (default 0) and multiply by the key value
-        let count2 = col2.get(key).unwrap_or(&0);
-        total_similarity += *key as i64 * *count1 as i64 * *count2 as i64;
-    }
-
-    total_similarity
-}
-
-pub fn part2_fast(input: &str) -> i64 {
+fn part2_impl<I>(iter: I) -> i64
+    where I: IntoIterator<Item = (i32, i32)>
+{
     // Create hashmaps to count occurrences in each column
     let mut dup_a: HashMap<i32, i16> = HashMap::with_capacity(100);
     let mut dup_b: HashMap<i32, i16> = HashMap::with_capacity(100);
@@ -94,20 +79,7 @@ pub fn part2_fast(input: &str) -> i64 {
     let mut bs_b = BitSet::with_capacity(100000);
     let mut match_ab: HashSet<i32> = HashSet::with_capacity(100);
 
-    for chunk in input.as_bytes().chunks(14) {
-        let b0 = (chunk[8+0] - b'0') as i32 * 10000;
-        let b1 = (chunk[8+1] - b'0') as i32 * 1000;
-        let b2 = (chunk[8+2] - b'0') as i32 * 100;
-        let b3 = (chunk[8+3] - b'0') as i32 * 10;
-        let b4 = (chunk[8+4] - b'0') as i32 * 1;
-
-        let a0 = (chunk[0+0] - b'0') as i32 * 10000;
-        let a1 = (chunk[0+1] - b'0') as i32 * 1000;
-        let a2 = (chunk[0+2] - b'0') as i32 * 100;
-        let a3 = (chunk[0+3] - b'0') as i32 * 10;
-        let a4 = (chunk[0+4] - b'0') as i32 * 1;
-        let a = a0+a1+a2+a3+a4;
-        let b = b0+b1+b2+b3+b4;
+    for (a, b) in iter {
         if bs_a.contains(a as usize) {
             *dup_a.entry(a).or_insert(1) += 1;
         }
@@ -142,9 +114,10 @@ pub fn part2(input: &str) -> i64 {
     // no nl for end
     let never_fastpath = (input.len() + 1) % 14 != 0;
     if never_fastpath {
-        return part2_fallback(input);
+        part2_impl(fallback_cols(input))
+    } else {
+        part2_impl(fast_cols(input))
     }
-    return part2_fast(input);
 }
 
 #[cfg(test)]
