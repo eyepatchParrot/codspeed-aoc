@@ -83,9 +83,41 @@ fn count_matches(x: &[u8]) -> i32 {
     count
 }
 
+fn count_xs(x: &[u8]) -> i32 {
+    let side = if x.len() == 11*9+10 { 10 } else { 140 };
+    let spacing = side + 1;
+    let mut count = 0;
+    for r in 0..side {
+        for c in 0..side {
+            // M.S
+            // .A.
+            // M.S
+            if r + 3 <= side && c + 3 <= side {
+                let nw = r * spacing + c;
+                let ne = nw+2;
+                let sw = nw+spacing + spacing;
+                let se = ne + spacing + spacing;
+                if x[nw+spacing+1] == b'A' {
+                    let mas_match_r = x[nw] == b'M' && x[se] == b'S';
+                    let sam_match_r = x[nw] == b'S' && x[se] == b'M';
+                    let mas_match_l = x[ne] == b'M' && x[sw] == b'S';
+                    let sam_match_l = x[ne] == b'S' && x[sw] == b'M';
+                    count += if (mas_match_r || sam_match_r) && (mas_match_l || sam_match_l) { 1 } else { 0 }
+                }
+            }
+        }
+    }
+    count
+}
+
 #[aoc(day4, part1)]
 pub fn part1(input: &str) -> i32 {
     count_matches(input.as_bytes())
+}
+
+#[aoc(day4, part2)]
+pub fn part2(input: &str) -> i32 {
+    count_xs(input.as_bytes())
 }
 
 #[cfg(test)]
@@ -105,9 +137,18 @@ MAMMMXMMMM
 MXMXAXMASX";
         assert_eq!(part1(input), 18);
     }
-    // #[test]
-    // fn test_part2() {
-    //     let input = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))";
-    //     assert_eq!(part2(input), 48);
-    // }
+    #[test]
+    fn test_part2() {
+        let input = "MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX";
+        assert_eq!(part2(input), 9);
+    }
 }
