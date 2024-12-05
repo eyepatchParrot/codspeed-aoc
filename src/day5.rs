@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::vec::Vec;
+// use std::vec::Vec;
 
 fn parse_input(input: &str) -> i32 {
     // Split the input into two sections based on the double newline
@@ -8,33 +8,61 @@ fn parse_input(input: &str) -> i32 {
     let sequences_section = sections.next().expect("Missing sequences section");
 
     // Parse the edges section into a HashMap
-    let mut graph: HashMap<u32, Vec<u32>> = HashMap::new();
+    let mut graph: HashMap<i32, Vec<i32>> = HashMap::new();
     for line in edges_section.lines() {
         let mut parts = line.split('|');
         let left = parts
             .next()
-            .and_then(|x| x.parse::<u32>().ok())
+            .and_then(|x| x.parse::<i32>().ok())
             .expect("Invalid left value in edges section");
         let right = parts
             .next()
-            .and_then(|x| x.parse::<u32>().ok())
+            .and_then(|x| x.parse::<i32>().ok())
             .expect("Invalid right value in edges section");
-        
+
         graph.entry(left).or_default().push(right);
     }
 
     let mut acc = 0i32;
+
     for line in sequences_section.lines() {
         let mut visited: HashSet<i32> = HashSet::new();
         let sequence: Vec<i32> = line.split(',').map(|x| x.parse::<i32>().unwrap()).collect();
-        let ok = true;
-        for x in &sequence {
-            // TODO add x to the visited set. Then, recursively traverse from x in the graph to all everything connected and ensure nothing there is in the visited set
-            unimplemented!();
+        let mut ok = true;
+
+        for &x in &sequence {
+            if !visited.insert(x) {
+                ok = false; // x is already visited
+                break;
+            }
+            // Recursively traverse from x in the graph and ensure no connected nodes are visited
+            if !traverse_and_check(x, &graph, &mut visited) {
+                ok = false;
+                break;
+            }
         }
-        acc += if ok { sequence[sequence.len()/2] } else { 0 };
+
+        if ok {
+            acc += sequence[sequence.len() / 2]; // Add the middle element of the sequence
+        }
     }
+
     acc
+}
+
+fn traverse_and_check(node: i32, graph: &HashMap<i32, Vec<i32>>, visited: &mut HashSet<i32>) -> bool {
+    if let Some(neighbors) = graph.get(&node) {
+        for &neighbor in neighbors {
+            if visited.contains(&neighbor) {
+                return false; // Neighbor is already visited
+            }
+            // Recursively check neighbors
+            if !traverse_and_check(neighbor, graph, visited) {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 #[aoc(day5, part1)]
