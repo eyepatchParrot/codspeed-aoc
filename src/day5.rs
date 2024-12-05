@@ -35,8 +35,9 @@ fn parse_input(input: &str) -> i32 {
                 ok = false; // x is already visited
                 break;
             }
+            let mut traverse_visited: HashSet<i32> = HashSet::new();
             // Recursively traverse from x in the graph and ensure no connected nodes are visited
-            if !traverse_and_check(x, &graph, &mut visited) {
+            if !traverse_and_check(x, &graph, &mut visited, &mut traverse_visited) {
                 ok = false;
                 break;
             }
@@ -50,14 +51,17 @@ fn parse_input(input: &str) -> i32 {
     acc
 }
 
-fn traverse_and_check(node: i32, graph: &HashMap<i32, Vec<i32>>, visited: &mut HashSet<i32>) -> bool {
+fn traverse_and_check(node: i32, graph: &HashMap<i32, Vec<i32>>, match_set: &mut HashSet<i32>, visited: &mut HashSet<i32>) -> bool {
+    if !visited.insert(node) {
+        return true;
+    }
     if let Some(neighbors) = graph.get(&node) {
         for &neighbor in neighbors {
-            if visited.contains(&neighbor) {
+            if match_set.contains(&neighbor) {
                 return false; // Neighbor is already visited
             }
             // Recursively check neighbors
-            if !traverse_and_check(neighbor, graph, visited) {
+            if !traverse_and_check(neighbor, graph, match_set, visited) {
                 return false;
             }
         }
